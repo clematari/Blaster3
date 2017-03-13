@@ -3,6 +3,9 @@
 #include <Adafruit_NeoPixel.h>
 #include <IRLib.h>
 #include <U8glib.h>
+#include <Arduino.h>
+#include <SoftwareSerial.h>
+#include <DFRobotDFPlayerMini.h>
 
 #define PIN_IR_RECEIVER      2
 #define PIN_IR_TRANSMITTER   3 //actually you can't set this pin, it is per default pin three
@@ -11,7 +14,7 @@
 #define PIN_WS2801_DATA      6
 //#define PIN_WS2801_CLOCK   7 
 #define PIN_VIBRO            7
-#define PIN_LASER_POINTER   8
+#define PIN_LASER_POINTER    8
 
 //#define USE_DUMP
 //GITHUB TEST
@@ -73,9 +76,15 @@
 IRrecv receiver(PIN_IR_RECEIVER);
 IRsend transmitter;
 IRdecodeBase decoder;
+
+SoftwareSerial mySoftwareSerial(10, 11); // RX, TX
+DFRobotDFPlayerMini myDFPlayer;
+
 U8GLIB_SH1106_128X64 u8g(U8G_I2C_OPT_NONE);  
 //Adafruit_WS2801 strip = Adafruit_WS2801(1, PIN_WS2801_DATA, PIN_WS2801_CLOCK);
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(1, PIN_WS2801_DATA, NEO_GRB + NEO_KHZ800);
+
+
 
 
 struct Buttons {
@@ -167,12 +176,16 @@ uint32_t hitByColor = 0xFFFFFF;
 void setup() {
   receiver.enableIRIn();
   Serial.begin(9600);
+  mySoftwareSerial.begin(9600);
   strip.begin();
   strip.show();
   setupButtons();
   start();
   digitalWrite(PIN_VIBRO,LOW);
   digitalWrite(PIN_LASER_POINTER,LOW);
+  myDFPlayer.begin(mySoftwareSerial);
+  myDFPlayer.volume(20);  //Set volume value. From 0 to 30
+  myDFPlayer.play(6);  //Play sciaction
   
 }
 
@@ -325,6 +338,7 @@ void loop() {
         digitalWrite(PIN_VIBRO, HIGH);
         currentEnergy = currentEnergy + getMarkerDamageByCode(getMarkerCodeFromHit(lastHit));
         lastHit = 0;
+       
         msSinceLastHit = millis();
         updateDisplay = true;
           //Serial.println("currentEnergy:");
@@ -353,6 +367,7 @@ void loop() {
       /* Reload Action */
       if (buttons[RELOAD].buttonDown == true) {
         reload();
+
       }
       
       /* Change Marker Action */
@@ -402,6 +417,7 @@ void shot(long teamCode, int markerCode) {
                 LIGHT_STRIKE_MAX_EXTENT);
     receiver.enableIRIn();
     //Serial.println(teamCode+markerCode,HEX);
+   myDFPlayer.play(3);  //play shot
     
     msSinceLastShot = millis();
     
@@ -409,6 +425,7 @@ void shot(long teamCode, int markerCode) {
     
     if (currentCharge == 0 && markers[currentMarker].type == 'P') {
       reload();
+      
     } 
     
     updateDisplay = true;
@@ -425,6 +442,7 @@ void action() {
 
 void reload() {
   currentCharge = markers[currentMarker].charges;
+  myDFPlayer.play(2);
   action();  
 }
 
